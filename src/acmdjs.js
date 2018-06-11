@@ -1,6 +1,7 @@
 'use strict';
 
-const acmdjs = (function(context) {
+var acmdjs;
+(function(context) {
 
     /**
      * @callback RequireFunction
@@ -18,9 +19,13 @@ const acmdjs = (function(context) {
      *
      */
 
+    if (typeof acmdjs !== 'undefined') {
+        return;
+    }
+
     class ACMDJSError extends Error { }
 
-    const acmdjs = {};
+    acmdjs = {};
 
     function clear() {
 
@@ -67,6 +72,10 @@ const acmdjs = (function(context) {
                 descriptor = {
                     Name: descriptor
                 };
+            }
+
+            if (typeof factory !== 'function' && typeof factory !== 'object') {
+                throw new Error('factory should be a function or object.');
             }
 
             const resolver = new ModuleResolver(descriptor, factory);
@@ -195,10 +204,17 @@ const acmdjs = (function(context) {
                         const module = new Module(this._Descriptor);
                         const exports = module.Exports;
                         loaderChain.enter(this.ModuleId);
-                        Promise.resolve(this._Factory(require, exports, module)).then(() => {
-                            loaderChain.exit(this.ModuleId);
-                            resolve(exports);
-                        }).catch(reject);
+                        if (typeof this._Factory === 'function') {
+                            Promise.resolve(this._Factory(require, exports, module)).then(ret => {
+                                loaderChain.exit(this.ModuleId);
+                                if (typeof ret === 'object') {
+                                    Object.assign(exports, ret);
+                                }
+                                resolve(exports);
+                            }).catch(reject);
+                        } else if (typeof this._Factory === 'object') {
+                            resolve(this._Factory);
+                        }
                     });
                 }
 
@@ -218,33 +234,22 @@ const acmdjs = (function(context) {
         clear
     });
 
-    acmdjs.clear();
-    return acmdjs;
+    acmdjs.clear(); // ensure reset.
 })(this);
 
-if (process) {
-    // run on node for test
-    module.exports = {
-        acmdjs
-    };
-}
+(c => {
+    if (!c) return;
+    if (typeof c.acmdjs === 'undefined') {
+        c.acmdjs = acmdjs;
+    }
+})((() => {
+    if (typeof process !== 'undefined') {
+        // run on node for test
+        module.exports = { acmdjs };
+        return global;
+    } else {
+        // run on browser
+        return window;
+    }
+})());
 
-async function main() {
-    acmdjs.define('example', async function(require, exports) {
-        const example2 = await require('example-2');
-        exports.ret = 1;
-    });
-
-    acmdjs.define('example-2', async function(require, exports) {
-        const example3 = await require('example-3');
-        exports.ret = 2;
-    });
-
-    acmdjs.define('example-3', async function(require, exports) {
-        const example = await require('example');
-        exports.ret = 3;
-    });
-
-    const example = await acmdjs.require('example');
-    //console.log(example);
-}

@@ -1,6 +1,6 @@
 'use strict';
 
-const { acmdjs } = require('../src/acmdjs');
+require('../src/acmdjs');
 const assert = require('assert');
 
 beforeEach(() => {
@@ -22,7 +22,7 @@ describe('acmdjs', function() {
     });
 
     describe('#clear()', function() {
-        it('call clear() should clean whole namespace', async function() {
+        it('clear() should clean whole namespace', async function() {
             acmdjs.define('module_1', async function(require, exports) {
                 exports.value = 1;
             });
@@ -53,7 +53,7 @@ describe('acmdjs', function() {
         });
     });
 
-    describe('#require()', function() {
+    describe('#define()~require', function() {
         it('require should return the exports object', async function() {
             let outerExports = null;
 
@@ -103,8 +103,44 @@ describe('acmdjs', function() {
                 await acmdjs.use('module_1');
                 assert.fail();
             } catch (error) {
+                assert.strictEqual(error.message, 'loop dependencies found: module_1 => module_2 => module_3 => module_1');
                 assert.strictEqual(error instanceof acmdjs.ACMDJSError, true);
             }
+        });
+    });
+
+    describe('#define()~exports', function() {
+        it('define should accept factory return value', async function() {
+            acmdjs.define('module_1', async function(require, exports) {
+                await new Promise(resolve => resolve());
+                exports.value = 1;
+                exports.valueBeOverwrite = 2;
+                return { retval: 3, valueBeOverwrite: 4 };
+            });
+
+            const module = await acmdjs.use('module_1');
+            assert.strictEqual(module.value, 1);
+            assert.strictEqual(module.retval, 3);
+            assert.strictEqual(module.valueBeOverwrite, 4);
+        });
+
+        it('define should accept data factory', async function() {
+            acmdjs.define('module_1', {
+                value: 4
+            });
+
+            const module = await acmdjs.use('module_1');
+            assert.strictEqual(module.value, 4);
+        });
+    });
+
+    describe('#define()~module', function() {
+        it('module should has Name', async function() {
+            acmdjs.define('module_1', async function(require, exports, module) {
+                assert.strictEqual(module.Name, 'module_1');
+            });
+
+            await acmdjs.use('module_1');
         });
     });
 });
