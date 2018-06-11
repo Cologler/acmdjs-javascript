@@ -1,0 +1,18 @@
+{
+  "name": "acmdjs",
+  "version": "1.0.0",
+  "description": "**acmdjs** is a base on **Asynchronous Common Module Definition**.",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "mocha": "^5.2.0"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "author": "",
+  "license": "MIT"
+}
